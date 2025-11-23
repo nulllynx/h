@@ -70,6 +70,787 @@
 
     <style>
         /* --- Base Setup --- */
+        @keyframes bg-cycle {
+            0% { background-color: #030712; }   /* Ultra Dark Blue */
+            25% { background-color: #0f0518; }  /* Deep Dark Purple */
+            50% { background-color: #021014; }  /* Deep Dark Cyan */
+            75% { background-color: #050b14; }  /* Deep Navy */
+            100% { background-color: #030712; } /* Loop back */
+        }
+
+        body {
+            background-color: #030712;
+            color: #f8fafc;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1200px;
+            animation: bg-cycle 40s ease infinite;
+        }
+
+        /* --- Professional Loader Styles --- */
+        #global-loader {
+            position: fixed;
+            inset: 0;
+            background-color: #02040a; /* Pitch black/blue */
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s cubic-bezier(0.7, 0, 0.3, 1), visibility 0.8s;
+        }
+        
+        #global-loader.loaded {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        /* Hexagon & Ring Animation */
+        .loader-hex-outer {
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            background: rgba(6, 182, 212, 0.1);
+            animation: pulse 2s infinite;
+        }
+
+        /* --- Ambient Background --- */
+        .ambient-light {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .light-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: blob 15s infinite alternate;
+        }
+        
+        .blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: #4c1d95; animation-delay: 0s; }
+        .blob-2 { bottom: -10%; right: -10%; width: 50vw; height: 50vw; background: #0e7490; animation-delay: 2s; }
+        .blob-3 { top: 40%; left: 40%; width: 30vw; height: 30vw; background: #be185d; animation-delay: 4s; opacity: 0.2; }
+
+        /* --- Glass Container --- */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.3);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 
+                0 0 0 1px rgba(255, 255, 255, 0.03), 
+                0 30px 60px -15px rgba(0, 0, 0, 0.8), 
+                inset 0 0 40px rgba(0,0,0,0.3);
+            width: 92%;
+            max-width: 1200px;
+            max-height: 95vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            
+            /* Initial state for entry animation */
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        
+        .glass-panel.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* --- Overlay Card (Themed) --- */
+        #card-clickable-area {
+            --theme-color: #38bdf8; 
+            --theme-glow: rgba(56, 189, 248, 0.3);
+        }
+
+        .cyber-card-wrapper {
+            position: relative;
+            z-index: 50;
+            border-radius: 24px;
+            padding: 2px;
+            overflow: hidden;
+            box-shadow: 
+                0 30px 80px -10px rgba(0,0,0,0.8), 
+                0 0 50px var(--theme-glow); 
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid var(--theme-color);
+        }
+
+        .cyber-card-wrapper:hover {
+            transform: scale(1.02);
+            box-shadow: 
+                0 35px 90px -10px rgba(0,0,0,0.9), 
+                0 0 70px var(--theme-glow);
+        }
+
+        .cyber-card-wrapper::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(
+                90deg, 
+                transparent, 
+                var(--theme-color), 
+                var(--theme-color), 
+                transparent
+            );
+            background-size: 200% 200%;
+            animation: spin-slow 4s linear infinite;
+            opacity: 0.8;
+        }
+
+        .cyber-card-inner {
+            background: rgba(10, 15, 30, 0.95);
+            backdrop-filter: blur(30px);
+            border-radius: 22px;
+            position: relative;
+            z-index: 10;
+            height: 100%; width: 100%;
+            overflow: hidden;
+        }
+
+        .cyber-grid {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            z-index: 0;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .scan-line {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--theme-color), transparent);
+            box-shadow: 0 0 15px var(--theme-color);
+            z-index: 5;
+            animation: scan 3s linear infinite;
+            pointer-events: none;
+        }
+
+        /* --- Interaction States --- */
+        #main-view {
+            transform-origin: center center;
+            will-change: transform, filter, opacity;
+            transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), 
+                        filter 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
+                        opacity 0.8s ease;
+        }
+
+        body.focus-mode #main-view {
+            filter: blur(16px) brightness(0.5) grayscale(0.2);
+            transform: scale(0.92);
+        }
+
+        #overlay-layer {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            
+            /* Close Animation State */
+            transform: perspective(1000px) translateY(60px) scale(0.9) rotateX(20deg);
+            filter: blur(20px);
+            
+            transition: 
+                transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                filter 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0.5s step-end;
+        }
+
+        #overlay-layer.active {
+            opacity: 1;
+            visibility: visible;
+            
+            /* Open Animation State */
+            transform: perspective(1000px) translateY(0) scale(1) rotateX(0deg);
+            filter: blur(0);
+            
+            transition: 
+                transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.6s ease-out,
+                filter 0.6s ease-out,
+                visibility 0s;
+                
+            pointer-events: auto;
+        }
+
+        /* Sequential Animation Elements */
+        #overlay-layer .cyber-card-inner > * {
+            opacity: 0;
+            transform: translateY(15px);
+            transition: all 0.3s ease-out;
+        }
+
+        #overlay-layer.active .cyber-card-inner > * {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #overlay-layer.active .group-card { transition-delay: 0.1s; }
+        #overlay-layer.active h3 { transition-delay: 0.3s; }
+        #overlay-layer.active .user-handle-wrapper { transition-delay: 0.5s; }
+        #overlay-layer.active .h-px { transition-delay: 0.7s; }
+        #overlay-layer.active #card-desc { transition-delay: 0.9s; }
+
+
+        /* --- Button Interactions --- */
+        .icon-btn {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            z-index: 20;
+        }
+
+        .icon-btn i {
+            transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .icon-btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.1), transparent 70%);
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.5s ease;
+        }
+
+        .icon-btn:hover {
+            transform: translateY(-6px) scale(1.08);
+            background: rgba(30, 41, 59, 0.95);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.6),
+                0 0 25px rgba(255, 255, 255, 0.03);
+        }
+
+        .icon-btn:hover i {
+            transform: scale(1.15); 
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
+        }
+
+        .icon-btn:hover::after { 
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        /* Responsive Tweaks */
+        @media (max-height: 800px) {
+            .glass-panel { padding: 2rem !important; }
+            .profile-wrapper { transform: scale(0.85); margin-bottom: 1rem !important; }
+            .hero-text { margin-bottom: 1.5rem !important; }
+            .hero-name { font-size: 3.5rem !important; }
+        }
+        @media (max-width: 640px) {
+            .hero-name { font-size: 2.5rem !important; }
+            .tagline { font-size: 0.9rem !important; }
+        }
+    </style>
+</head>
+<body class="antialiased font-sans selection:bg-brand-cyan selection:text-black">
+
+    <!-- Unique Professional Loader -->
+    <div id="global-loader">
+        <!-- Cyber Grid for Loader -->
+        <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
+        
+        <div class="relative flex flex-col items-center">
+            <!-- Spinner Container -->
+            <div class="relative w-32 h-32 mb-10">
+                <!-- Glowing Core -->
+                <div class="absolute inset-0 bg-brand-cyan/5 rounded-full animate-pulse"></div>
+                
+                <!-- Rotating Rings -->
+                <div class="absolute inset-0 border-2 border-transparent border-t-brand-cyan border-l-brand-cyan/50 rounded-full animate-[spin_2s_linear_infinite] shadow-[0_0_15px_rgba(6,182,212,0.3)]"></div>
+                <div class="absolute inset-4 border-2 border-transparent border-b-brand-purple border-r-brand-purple/50 rounded-full animate-[spin_3s_linear_infinite_reverse]"></div>
+                
+                <!-- Central Hex with Counter -->
+                <div class="absolute inset-0 flex items-center justify-center z-10">
+                    <div class="w-16 h-16 bg-black/80 backdrop-blur-sm rounded-full border border-white/10 flex items-center justify-center shadow-inner">
+                        <span id="loader-percent" class="text-white font-mono text-lg font-bold">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-64 h-1 bg-gray-900 rounded-full overflow-hidden relative mb-4 border border-white/5">
+                <div id="loader-bar" class="absolute left-0 top-0 h-full bg-gradient-to-r from-brand-cyan via-brand-purple to-brand-pink w-0 shadow-[0_0_10px_rgba(6,182,212,0.5)]"></div>
+            </div>
+            
+            <!-- Status Text -->
+            <div class="flex flex-col items-center gap-1 h-8">
+                <div id="loader-text" class="text-brand-cyan font-mono text-xs tracking-[0.3em] uppercase animate-pulse">Initializing...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ambient Background -->
+    <div class="ambient-light">
+        <div class="light-blob blob-1"></div>
+        <div class="light-blob blob-2"></div>
+        <div class="light-blob blob-3"></div>
+        <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-150 contrast-150 mix-blend-overlay"></div>
+    </div>
+
+    <!-- Overlay Card -->
+    <div id="overlay-layer">
+        <div id="card-clickable-area" class="cyber-card-wrapper w-80 md:w-[26rem]">
+            <div class="cyber-card-inner p-8 text-center flex flex-col items-center shadow-2xl relative">
+                
+                <!-- Texture & Effects -->
+                <div class="cyber-grid"></div>
+                <div class="scan-line"></div>
+                
+                <!-- Close Button (X) -->
+                <button id="close-card-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors duration-300 z-50 p-2 hover:rotate-90">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+
+                <!-- 1. Profile Image Area -->
+                <div class="relative mb-6 group-card z-10">
+                    <!-- Spinning Outer Ring (Dynamic Color) -->
+                    <div id="dynamic-ring" class="absolute -inset-3 rounded-full border border-dashed border-white/20 animate-spin-slow pointer-events-none" style="border-color: var(--theme-color);"></div>
+                    
+                    <!-- Profile Pic -->
+                    <div class="w-32 h-32 rounded-full p-1.5 bg-gradient-to-br from-white/10 to-transparent backdrop-blur-md shadow-2xl relative">
+                         <!-- Dynamic Glow Behind Pic -->
+                         <div id="profile-glow" class="absolute inset-0 bg-brand-cyan/20 rounded-full blur-md animate-pulse" style="background-color: var(--theme-color); opacity: 0.3;"></div>
+                        <img src="/image.png" 
+                             alt="Profile" 
+                             class="w-full h-full rounded-full object-cover border-2 border-white/10 shadow-inner relative z-10">
+                    </div>
+                    
+                    <!-- Icon Badge (FIXED POSITION & Dynamic Color) -->
+                    <div id="card-icon-badge" class="absolute bottom-1 right-1 w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center border border-white/20 text-xl shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-all duration-300 z-20"></div>
+                </div>
+                
+                <!-- 2. Title -->
+                <h3 id="card-title" class="text-3xl font-bold text-white mb-2 font-mono tracking-tighter relative z-10 drop-shadow-lg"></h3>
+                
+                <!-- 3. User Handle / Label -->
+                <div class="relative z-10 mb-5 user-handle-wrapper">
+                    <span id="card-action" class="text-sm font-bold tracking-[0.2em] uppercase transition-colors duration-300 bg-white/5 px-4 py-1.5 rounded-full border border-white/10 shadow-inner"></span>
+                </div>
+                
+                <!-- 4. Divider -->
+                <div class="h-px w-3/4 bg-gradient-to-r from-transparent via-white/20 to-transparent mb-5 relative z-10"></div>
+                
+                <!-- 5. Description -->
+                <p id="card-desc" class="text-gray-300 text-sm md:text-base font-light leading-relaxed relative z-10 max-w-xs mx-auto"></p>
+                
+                <!-- Click Hint -->
+                <div class="absolute bottom-3 left-0 w-full text-center text-xs text-white/20 uppercase tracking-widest pointer-events-none">Click card to open</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Interface -->
+    <main id="main-view" class="glass-panel rounded-[3rem] p-8 md:p-16">
+        
+        <!-- Profile Section -->
+        <div class="profile-wrapper relative mb-8 md:mb-12 group">
+            <div class="absolute -inset-4 border border-brand-cyan/20 rounded-full animate-[spin_10s_linear_infinite]"></div>
+            <div class="absolute -inset-4 border border-brand-purple/20 rounded-full animate-[spin_15s_linear_infinite_reverse] scale-90"></div>
+            <div class="absolute -inset-1 bg-gradient-to-r from-brand-cyan via-brand-purple to-brand-pink rounded-full blur-xl opacity-40 group-hover:opacity-75 transition duration-500 animate-pulse-glow"></div>
+            <div class="relative w-40 h-40 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-black/50 shadow-2xl">
+                <img src="https://ui-avatars.com/api/?name=Nulllynx&background=0f172a&color=38bdf8&size=512&bold=true&font-size=0.33" 
+                     alt="Nulllynx" 
+                     class="w-full h-full object-cover transform transition duration-700 group-hover:scale-110">
+            </div>
+            <div class="absolute bottom-2 right-2 md:bottom-4 md:right-4 w-6 h-6 md:w-8 md:h-8 bg-emerald-500 rounded-full border-4 border-dark-surface shadow-[0_0_15px_rgba(16,185,129,0.5)] z-20"></div>
+        </div>
+
+        <!-- Typography -->
+        <div class="hero-text text-center mb-6 md:mb-10 z-10">
+            <h1 class="hero-name text-5xl md:text-7xl lg:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-500 tracking-tighter mb-2 md:mb-4 drop-shadow-xl uppercase">
+                Asanul Hoque Esan
+            </h1>
+            <p class="text-brand-cyan/80 text-sm md:text-xl font-mono tracking-widest max-w-3xl mx-auto px-4">
+                Computer, Technology, and Security Enthusiast
+            </p>
+        </div>
+
+        <!-- Social Grid -->
+        <div class="w-full max-w-4xl relative z-10">
+            <div class="grid grid-cols-5 gap-3 md:gap-6 lg:gap-8 place-items-center">
+                
+                <!-- Github -->
+                <button class="icon-btn w-12 h-12 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-xl md:text-4xl text-gray-300"
+                    data-icon="fab fa-github" 
+                    data-title="GitHub" 
+                    data-desc="Exploring open source & security tools" 
+                    data-color="#38bdf8" 
+                    data-action="github.com/nulllynx"
+                    data-url="https://github.com/nulllynx">
+                    <i class="fab fa-github"></i>
+                </button>
+
+                <!-- LinkedIn -->
+                <button class="icon-btn w-12 h-12 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-xl md:text-4xl text-gray-300"
+                    data-icon="fab fa-linkedin-in" 
+                    data-title="LinkedIn" 
+                    data-desc="Professional connections & career" 
+                    data-color="#0a66c2" 
+                    data-action="linkedin.com/in/nulllynx"
+                    data-url="https://linkedin.com/in/nulllynx">
+                    <i class="fab fa-linkedin-in"></i>
+                </button>
+
+                <!-- Twitter -->
+                <button class="icon-btn w-12 h-12 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-xl md:text-4xl text-gray-300"
+                    data-icon="fab fa-x-twitter" 
+                    data-title="X / Twitter" 
+                    data-desc="Cybersec news & daily tech thoughts" 
+                    data-color="#1DA1F2" 
+                    data-action="@nulllynx"
+                    data-url="https://twitter.com/nulllynx">
+                    <i class="fab fa-x-twitter"></i>
+                </button>
+
+                <!-- Instagram -->
+                <button class="icon-btn w-12 h-12 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-xl md:text-4xl text-gray-300"
+                    data-icon="fab fa-instagram" 
+                    data-title="Instagram" 
+                    data-desc="Workspace setups & lifestyle" 
+                    data-color="#E1306C" 
+                    data-action="@nulllynx"
+                    data-url="https://instagram.com/nulllynx">
+                    <i class="fab fa-instagram"></i>
+                </button>
+
+                <!-- YouTube -->
+                <button class="icon-btn w-12 h-12 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-xl md:text-4xl text-gray-300"
+                    data-icon="fab fa-youtube" 
+                    data-title="YouTube" 
+                    data-desc="Ethical hacking tutorials & guides" 
+                    data-color="#FF0000" 
+                    data-action="youtube.com/@nulllynx"
+                    data-url="https://youtube.com/@nulllynx">
+                    <i class="fab fa-youtube"></i>
+                </button>
+
+                <!-- Facebook -->
+                <button class="icon-btn w-12 h-12 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-xl md:text-4xl text-gray-300"
+                    data-icon="fab fa-facebook" 
+                    data-title="Facebook" 
+                    data-desc="Connecting with friends & family" 
+                    data-color="#1877F2" 
+                    data-action="facebook.com/nulllynx"
+                    data-url="https://facebook.com/nulllynx">
+                    <i class="fab fa-facebook"></i>
+                </button>
+
+                <!-- Telegram -->
+                <button class="icon-btn w-12 h-12 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-xl md:text-4xl text-gray-300"
+                    data-icon="fab fa-telegram" 
+                    data-title="Telegram" 
+                    data-desc="Secure direct messaging" 
+                    data-color="#0088cc" 
+                    data-action="@nulllynx"
+                    data-url="https://t.me/nulllynx">
+                    <i class="fab fa-telegram"></i>
+                </button>
+
+                <!-- Reddit -->
+                <button class="icon-btn w-12 h-12 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-xl md:text-4xl text-gray-300"
+                    data-icon="fab fa-reddit-alien" 
+                    data-title="Reddit" 
+                    data-desc="Active in r/netsec & r/hacking" 
+                    data-color="#FF4500" 
+                    data-action="u/nulllynx"
+                    data-url="https://reddit.com/u/nulllynx">
+                    <i class="fab fa-reddit-alien"></i>
+                </button>
+
+                <!-- Discord -->
+                <button class="icon-btn w-12 h-12 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-xl md:text-4xl text-gray-300"
+                    data-icon="fab fa-discord" 
+                    data-title="Discord" 
+                    data-desc="Join the community server" 
+                    data-color="#5865F2" 
+                    data-action="nulllynx"
+                    data-url="copy:nulllynx">
+                    <i class="fab fa-discord"></i>
+                </button>
+
+                <!-- Medium -->
+                <button class="icon-btn w-12 h-12 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-xl md:text-4xl text-gray-300"
+                    data-icon="fab fa-medium" 
+                    data-title="Medium" 
+                    data-desc="Deep dive technical articles" 
+                    data-color="#ffffff" 
+                    data-action="medium.com/@nulllynx"
+                    data-url="https://medium.com/@nulllynx">
+                    <i class="fab fa-medium"></i>
+                </button>
+
+            </div>
+        </div>
+
+        <!-- Big Portfolio Button -->
+        <a href="https://nulllynx.github.io/0/" target="_blank" class="group relative mt-8 md:mt-10 z-20 transition-transform hover:scale-105 duration-300">
+            <div class="absolute -inset-1 bg-gradient-to-r from-brand-cyan via-brand-purple to-brand-pink rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-glow"></div>
+            <div class="relative px-10 py-4 md:px-16 md:py-6 bg-gray-900 ring-1 ring-white/10 rounded-xl flex items-center gap-4 md:gap-6 shadow-2xl">
+                <span class="text-2xl md:text-4xl font-bold text-white tracking-widest font-heading uppercase group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-brand-cyan group-hover:to-brand-purple transition-all">
+                    My Portfolio
+                </span>
+                <div class="w-8 h-8 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-brand-cyan group-hover:text-black transition-colors">
+                    <i class="fas fa-arrow-right text-sm md:text-xl transform group-hover:-rotate-45 transition-transform duration-300"></i>
+                </div>
+            </div>
+        </a>
+
+    </main>
+
+    <!-- JS Logic -->
+    <script>
+        const btns = document.querySelectorAll('.icon-btn');
+        const body = document.body;
+        const overlay = document.getElementById('overlay-layer');
+        const cardArea = document.getElementById('card-clickable-area'); 
+        const closeBtn = document.getElementById('close-card-btn');
+        
+        const loader = document.getElementById('global-loader');
+        const loaderBar = document.getElementById('loader-bar');
+        const loaderPercent = document.getElementById('loader-percent');
+        const loaderText = document.getElementById('loader-text');
+        const mainView = document.getElementById('main-view');
+        let activeTimeout; 
+        
+        // Card Elements
+        const cBadge = document.getElementById('card-icon-badge');
+        const cTitle = document.getElementById('card-title');
+        const cDesc = document.getElementById('card-desc');
+        const cAction = document.getElementById('card-action');
+        
+        // Dynamic styling targets
+        const dynamicRing = document.getElementById('dynamic-ring');
+        const profileGlow = document.getElementById('profile-glow');
+
+        // Store URL state
+        let currentCardUrl = "";
+
+        // Loader Logic
+        const loadingTexts = ["INITIALIZING...", "VERIFYING ENCRYPTION...", "ESTABLISHING UPLINK...", "ACCESS GRANTED"];
+        let progress = 0;
+
+        function updateLoader() {
+            // Slower progress for "professional" feel
+            if (progress < 100) {
+                progress += Math.random() * 2; 
+                if (progress > 100) progress = 100;
+                
+                loaderBar.style.width = `${progress}%`;
+                loaderPercent.innerText = `${Math.floor(progress)}%`;
+                
+                // Text update logic
+                if (progress > 20 && progress < 22) loaderText.innerText = loadingTexts[1];
+                if (progress > 50 && progress < 52) loaderText.innerText = loadingTexts[2];
+                if (progress > 90 && progress < 92) loaderText.innerText = loadingTexts[3];
+
+                requestAnimationFrame(updateLoader);
+            } else {
+                setTimeout(() => {
+                    loader.classList.add('loaded');
+                    mainView.classList.add('visible');
+                }, 500);
+            }
+        }
+
+        // Start Loader
+        window.addEventListener('load', () => {
+            requestAnimationFrame(updateLoader);
+        });
+
+        function updateContent(data) {
+             cBadge.innerHTML = `<i class="${data.icon}"></i>`;
+             cBadge.style.color = data.color;
+             cBadge.style.borderColor = data.color;
+             cBadge.style.boxShadow = `0 0 10px ${data.color}40`;
+
+             cTitle.textContent = data.title;
+             cDesc.textContent = data.desc;
+             
+             cAction.textContent = data.action;
+             cAction.style.color = data.color;
+             cAction.style.borderColor = `${data.color}40`;
+             cAction.style.boxShadow = `0 0 10px ${data.color}20`;
+             
+             // Dynamic THEME UPDATE
+             cardArea.style.setProperty('--theme-color', data.color);
+             cardArea.style.setProperty('--theme-glow', data.color + '60'); 
+             
+             currentCardUrl = data.url;
+        }
+
+        function closeOverlay() {
+            overlay.classList.remove('active');
+            body.classList.remove('focus-mode');
+        }
+
+        // Close Button Event
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeOverlay();
+        });
+
+        // Close overlay when clicking outside the card
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closeOverlay();
+            }
+        });
+
+        // Click on the box to open link
+        cardArea.addEventListener('click', () => {
+            if (!currentCardUrl) return;
+
+            if (currentCardUrl.startsWith('copy:')) {
+                const textToCopy = currentCardUrl.split(':')[1];
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const originalText = cAction.textContent;
+                    cAction.textContent = "COPIED!";
+                    setTimeout(() => {
+                        cAction.textContent = originalText;
+                    }, 1500);
+                });
+            } else {
+                window.open(currentCardUrl, '_blank');
+            }
+        });
+
+        btns.forEach(btn => {
+            // Click to Open Card
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+
+                const data = {
+                    icon: btn.dataset.icon,
+                    title: btn.dataset.title,
+                    desc: btn.dataset.desc,
+                    color: btn.dataset.color,
+                    action: btn.dataset.action,
+                    url: btn.dataset.url
+                };
+
+                if (overlay.classList.contains('active')) {
+                    closeOverlay();
+                    clearTimeout(activeTimeout);
+                    setTimeout(() => {
+                        updateContent(data);
+                        overlay.classList.add('active');
+                        body.classList.add('focus-mode');
+                    }, 400); 
+                } else {
+                    updateContent(data);
+                    overlay.classList.add('active');
+                    body.classList.add('focus-mode');
+                }
+            });
+        });
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nulllynx | Cyber Portfolio</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Custom Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['Space Grotesk', 'monospace'],
+                    },
+                    colors: {
+                        dark: {
+                            base: '#030712',
+                            surface: '#0f172a',
+                        },
+                        brand: {
+                            cyan: '#06b6d4',
+                            purple: '#8b5cf6',
+                            pink: '#ec4899',
+                        }
+                    },
+                    animation: {
+                        'blob': 'blob 25s infinite',
+                        'spin-slow': 'spin 15s linear infinite',
+                        'float': 'float 10s ease-in-out infinite',
+                        'pulse-glow': 'pulseGlow 5s ease-in-out infinite',
+                        'scan': 'scan 3s linear infinite',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(50px, -30px) scale(1.05)' },
+                            '66%': { transform: 'translate(-30px, 40px) scale(0.95)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-15px)' },
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { opacity: 0.6, transform: 'scale(1)' },
+                            '50%': { opacity: 1, transform: 'scale(1.05)' },
+                        },
+                        scan: {
+                            '0%': { top: '-10%', opacity: 0 },
+                            '20%': { opacity: 1 },
+                            '80%': { opacity: 1 },
+                            '100%': { top: '110%', opacity: 0 },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* --- Base Setup --- */
         body {
             background-color: #030712;
             color: #f8fafc;
